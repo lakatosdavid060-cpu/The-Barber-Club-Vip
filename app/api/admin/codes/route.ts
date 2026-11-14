@@ -1,0 +1,4 @@
+import { adminDb } from '@/lib/firebase-admin';
+import { makeCode, hashCode, jsonError } from '@/lib/vip';
+import { requireAdmin } from '@/lib/firebase-admin';
+export async function POST(request:Request){try{await requireAdmin(request);const body=await request.json();const count=Math.max(1,Math.min(50,Number(body.count)||1));const db=adminDb();const codes:string[]=[];for(let i=0;i<count;i++){let saved=false;for(let attempt=0;attempt<5&&!saved;attempt++){const code=makeCode();const ref=db.ref(`luxuryVip/codes/${hashCode(code)}`);const result=await ref.transaction(current=>current===null?{status:'unused',createdAt:Date.now()}:undefined);if(result.committed){codes.push(code);saved=true;}}if(!saved)throw new Error('Nem sikerült egyedi kódot létrehozni.');}return Response.json({codes});}catch(e){return jsonError(e);}}

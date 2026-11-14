@@ -57,8 +57,26 @@ export default function AdminPage() {
   async function login(event: React.FormEvent) {
     event.preventDefault(); setError('');
     if (!auth) { setError('A Firebase még nem áll készen. Ellenőrizd a beállításokat.'); return; }
-    try { await signInWithEmailAndPassword(auth, email.trim(), password); }
-    catch { setError('Sikertelen belépés. Ellenőrizd az email-címet és a jelszót, valamint a Firebase beállításait.'); }
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string; message?: string };
+      const code = firebaseError.code || 'auth/unknown';
+      // A pontos kódot a konzolra is kiírjuk, hogy a Firebase-hiba diagnosztizálható legyen.
+      console.error('[Firebase admin login]', code, firebaseError.message || err);
+      const messages: Record<string, string> = {
+        'auth/invalid-credential': 'Hibás email-cím vagy jelszó. Ellenőrizd a belépési adatokat.',
+        'auth/invalid-login-credentials': 'Hibás email-cím vagy jelszó. Ellenőrizd a belépési adatokat.',
+        'auth/user-not-found': 'Ez az email-cím nem található a Firebase Authentication felhasználói között.',
+        'auth/wrong-password': 'A megadott jelszó nem megfelelő.',
+        'auth/operation-not-allowed': 'A Firebase-ben nincs engedélyezve az Email/Password bejelentkezés.',
+        'auth/invalid-api-key': 'A Firebase API-kulcs érvénytelen. Ellenőrizd a Vercelben használt Firebase-projekt konfigurációját.',
+        'auth/too-many-requests': 'Túl sok sikertelen próbálkozás történt. Várj egy kicsit, majd próbáld újra.',
+        'auth/unauthorized-domain': 'A weboldal domainje nincs engedélyezve a Firebase Authentication beállításaiban.',
+        'auth/network-request-failed': 'Hálózati hiba történt. Ellenőrizd az internetkapcsolatot, majd próbáld újra.',
+      };
+      setError(`${messages[code] || 'A Firebase elutasította a bejelentkezést. Nézd meg a részletes hibakódot.'} (Kód: ${code})`);
+    }
   }
   async function generate() {
     setBusy(true); setError(''); setNotice('');

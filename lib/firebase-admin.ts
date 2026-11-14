@@ -8,7 +8,7 @@ function getAdminApp() {
   if (!raw) throw new Error('Missing FIREBASE_SERVICE_ACCOUNT_JSON');
   const serviceAccount = JSON.parse(raw);
   if (serviceAccount.private_key) serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-  return initializeApp({ credential: cert(serviceAccount), databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL });
+  return initializeApp({ credential: cert(serviceAccount), databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://ordog-fizetes-default-rtdb.europe-west1.firebasedatabase.app' });
 }
 
 export function adminAuth() { return getAuth(getAdminApp()); }

@@ -1,62 +1,73 @@
-# The Luxury Barber Club — VIP
+# The Luxury Barber Club – VIP játék
 
-Next.js + Firebase Realtime Database starter for one-time VIP codes, guest registration and admin-triggered weekly draws.
+A projekt Next.js alkalmazásként Vercelen fut, a vendég- és sorsolási adatokat a Firebase Realtime Database tárolja.
 
-## 1. Requirements
-- Node.js 20.9+
-- A Firebase project with **Authentication (Email/Password)** and **Realtime Database** enabled
-- A Firebase service account for server-side Admin SDK access
-- A Vercel project
+## A játék menete
 
-## 2. Firebase setup
-1. In Firebase Console, open the existing project selected by the owner.
-2. Enable Authentication → Sign-in method → Email/Password.
-3. Create the owner's admin user under Authentication → Users. Verify the email address.
-4. In Project settings → Service accounts, generate a private key. Keep it secret.
-5. The supplied public Web App configuration is included as a fallback in `lib/firebase-client.ts`; `.env.example` contains the same values if you prefer to set them explicitly in Vercel. Use the exact Firebase field names `apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId` and `measurementId` in JavaScript configuration objects.
-6. Add the service-account JSON as `FIREBASE_SERVICE_ACCOUNT_JSON`. Keep it server-only.
-7. Set `ADMIN_EMAILS` to the exact verified admin email address(es), comma-separated.
-8. **Do not replace the existing project's database rules.** The app accesses `/luxuryVip` only through the server-side Admin SDK; the browser never reads or writes VIP records directly. Keep the current rules for the other application and review them separately.
+1. A vendég befejezi a hajvágást, majd jelzi a fodrászának, hogy szeretne részt venni a VIP-nyereményjátékban.
+2. A fodrász az adminfelületen egyszer használható VIP-belépőkódot hoz létre és átadja a vendégnek.
+3. A vendég a főoldalon megadja a nevét és a VIP-kódját, majd elfogadja, hogy a neve megjelenik a heti szerencsekeréken.
+4. A szerver ellenőrzi és egyszer használatosként megjelöli a kódot, majd hozzáadja a nevezést az aktuális heti játékhoz.
+5. Az élő szerencsekerék körülbelül 3 másodpercenként frissül. Az új résztvevők neve automatikusan megjelenik a keréken és a listában.
+6. A heti sorsolást az adminisztrátor kézzel indítja el. A nyertest a szerver választja ki, nem a böngésző.
 
-**Important:** the Firebase web config contains a public API key, not an admin credential. The service-account private key is highly sensitive. Never put it in a `NEXT_PUBLIC_` variable, source code, Git, or a browser bundle. Since the chosen Firebase project may contain unrelated payment data, back it up first and verify the correct database URL/project before deployment. The app stores its data only under `/luxuryVip`. Do not upload the included example rules as a replacement for rules in a shared production project.
+## Firebase beállítása
 
-## 3. Local development
-```bash
-cp .env.example .env.local
-# Fill every value
-npm install
-npm run dev
-```
-Open http://localhost:3000. Admin: http://localhost:3000/admin.
+A böngészőben használt Firebase webes konfiguráció a `lib/firebase-client.ts` fájlban szerepel a megadott `ordog-fizetes` projekt adataival. A Firebase web API-kulcs kliensoldali azonosító, nem Service Account titok. Ha az `auth/invalid-api-key` hiba továbbra is jelentkezik, ellenőrizd a Firebase Console-ban, hogy a kulcs a `ordog-fizetes` projekt Web App konfigurációjából származik-e, nincs-e API-korlátozással letiltva, és az Identity Toolkit API engedélyezett-e.
 
-## 4. Vercel deployment
-1. Push this folder to a private Git repository.
-2. Import it in Vercel as a Next.js project.
-3. Add `FIREBASE_SERVICE_ACCOUNT_JSON` and `ADMIN_EMAILS` in Vercel → Project → Settings → Environment Variables. The public Firebase web settings are already included as fallbacks; you may also add the matching `NEXT_PUBLIC_FIREBASE_*` variables from `.env.example`. Do not add the service account with a `NEXT_PUBLIC_` prefix.
-4. In Firebase Console → Authentication → Settings → Authorized domains, add your exact Vercel domain (for example, `your-project.vercel.app`).
-5. Redeploy after changing environment variables, then test the public registration and admin login flows.
+A Firebase Console-ban:
+- Authentication → Sign-in method → Email/Password: engedélyezd.
+- Authentication → Users: hozd létre a `luxurybarber@gmail.com` felhasználót, állíts be jelszót, és igazold az email-címet.
+- Project settings → Service accounts → Firebase Admin SDK: hozz létre privát kulcsot.
+- A letöltött Service Account JSON teljes tartalmát titkos Vercel környezeti változóként add meg `FIREBASE_SERVICE_ACCOUNT_JSON` néven.
 
-## 5. How it works
-- Admin signs in with Firebase Email/Password.
-- Server verifies the Firebase ID token, verified email and `ADMIN_EMAILS` allowlist.
-- Admin creates random one-time codes. Only SHA-256 hashes are stored in `/luxuryVip/codes`.
-- Guest submits name + code. Server consumes the code transactionally and adds an entry to the current ISO week.
-- The weekly draw is admin-triggered. It atomically locks the week's entry list, selects a winner with Node's cryptographic random generator, then stores the result.
-- The week ID is UTC ISO week (`YYYY-Www`). Before production, confirm that this matches the salon's intended local weekly cutoff.
+## Vercel környezeti változók
 
-## 6. Before public launch
-- Add final official game rules, privacy notice, retention policy, contact details and eligibility/claim process. Obtain appropriate legal review for the applicable jurisdiction.
-- Define whether the prize draw is free and whether any purchase is required; get local legal advice before advertising it as a chance-based promotion.
-- Add rate limiting / bot protection to public redemption, audit logging, backup and monitoring.
-- Consider a dedicated Firebase project rather than a project shared with payment-related services.
-- Confirm the salon's weekly closing time and timezone; current week calculation uses UTC.
+A Vercel projektben: Settings → Environment Variables.
 
-## Database shape
-```text
-luxuryVip/
-  codes/{sha256(code)}                 # unused → redeemed
-  guestIndex/{redemptionId}            # minimal guest index
-  weeks/{YYYY-Www}/entries/{entryId}   # eligible entries
-  weeks/{YYYY-Www}/draw                # open → drawing → completed
-  winners/{YYYY-Www}                  # immutable result snapshot
-```
+### 1. FIREBASE_SERVICE_ACCOUNT_JSON
+- Név: `FIREBASE_SERVICE_ACCOUNT_JSON`
+- Érték: a Firebase Console-ból letöltött Service Account JSON teljes tartalma.
+- Környezet: Production (és szükség esetén Preview/Development).
+- Jelöld titkos értékként, ha a felület felkínálja.
+- Soha ne tedd GitHubra, `NEXT_PUBLIC_` változóba vagy a böngészőbe.
+
+### 2. ADMIN_EMAILS
+- Név: `ADMIN_EMAILS`
+- Érték: `luxurybarber@gmail.com`
+- Több admin esetén vesszővel elválasztva.
+- Környezet: Production (és szükség esetén Preview/Development).
+
+A `FIREBASE_SERVICE_ACCOUNT_JSON` szerveroldali hitelesítő adat; az `ADMIN_EMAILS` csak az engedélyezett, igazolt Firebase Auth email-címeket sorolja fel. Az admin felhasználót külön létre kell hozni a Firebase Authenticationben.
+
+## Realtime Database szabályok
+
+A projekt mellé `firebase-rules.json` fájl került. A benne lévő szabályok az egész adatbázis közvetlen böngészős olvasását és írását tiltják. A szerveroldali Firebase Admin SDK ezt megkerüli, ezért a Next.js API-k továbbra is működnek.
+
+A szabályok közzététele előtt figyelj: ha az `ordog-fizetes` adatbázist másik alkalmazás is használja, a teljes adatbázisra vonatkozó tiltás annak közvetlen böngészős hozzáférését is leállíthatja. Ilyenkor előbb fel kell mérni a meglévő szabályokat és az alkalmazás adatútvonalait. Ne cseréld le a meglévő szabályokat mentés és ellenőrzés nélkül.
+
+Firebase Console → Realtime Database → Rules: a fájl tartalmát illeszd be, majd Publish. A szerver API az adatokat a `luxuryVip/` ág alatt kezeli.
+
+## Telepítés
+
+1. Töltsd fel a projektet GitHubra.
+2. Vercel → Add New → Project → Import Git Repository.
+3. Framework Preset: Next.js; Build Command: `npm run build`.
+4. Add hozzá a fenti két környezeti változót.
+5. Deploy, majd ellenőrizd a főoldalt és az `/admin` oldalt.
+
+## Fontos indulás előtti teendők
+
+- A nyilvános szerencsekerék a résztvevők nevét minden látogatónak megmutatja. A nevező ezt külön jelölőnégyzettel tudomásul veszi.
+- A végleges játékszabályzatnak, adatkezelési tájékoztatónak, adatmegőrzési időnek, jogosultsági feltételeknek, nyereményeknek és kapcsolattartási adatoknak a szalon valós adatait kell tartalmazniuk. A jelenlegi felület nem helyettesíti a jogilag ellenőrzött dokumentumokat.
+- A nyereményjáték és az esetleges vásárlási feltételek jogi megfelelőségét indulás előtt ellenőriztesd a célország szabályai szerint.
+- A publikus nevezési végpont éles használata előtt érdemes sebességkorlátozást és botvédelmet beállítani.
+- A projekt heti azonosítója jelenleg UTC szerinti ISO-hét. A heti zárási időt a szalon időzónájához kell igazítani, ha ettől eltérő szabályt szeretnétek.
+
+## Adatstruktúra
+
+- `luxuryVip/codes/{kód_hash}` – egyszer használható kódok.
+- `luxuryVip/guestIndex/{nevezés_azonosító}` – vendégindex.
+- `luxuryVip/weeks/{év-hét}/entries/{nevezés_azonosító}` – heti nevezések.
+- `luxuryVip/weeks/{év-hét}/draw` – sorsolás állapota és eredménye.
+- `luxuryVip/winners/{év-hét}` – nyertes eredményének mentése.

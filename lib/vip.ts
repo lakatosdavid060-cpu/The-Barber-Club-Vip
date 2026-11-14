@@ -13,7 +13,14 @@ export function currentWeekId(date = new Date()) {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 export function jsonError(error: unknown) {
-  const message = error instanceof Error ? error.message : 'SERVER_ERROR';
-  const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;
+  const raw = error instanceof Error ? error.message : '';
+  const message = raw === 'UNAUTHORIZED'
+    ? 'A művelethez be kell jelentkezned.'
+    : raw === 'FORBIDDEN'
+      ? 'Ehhez a művelethez nincs adminisztrátori jogosultságod.'
+      : raw.includes('FIREBASE_SERVICE_ACCOUNT_JSON')
+        ? 'A szerver Firebase-hitelesítése nincs beállítva a Vercelben.'
+        : 'Váratlan hiba történt a szerveren. Ellenőrizd a Vercel naplóját.';
+  const status = raw === 'UNAUTHORIZED' ? 401 : raw === 'FORBIDDEN' ? 403 : 500;
   return Response.json({ error: message }, { status });
 }

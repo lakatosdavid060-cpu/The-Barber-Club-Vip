@@ -13,7 +13,7 @@ Next.js + Firebase Realtime Database starter for one-time VIP codes, guest regis
 2. Enable Authentication → Sign-in method → Email/Password.
 3. Create the owner's admin user under Authentication → Users. Verify the email address.
 4. In Project settings → Service accounts, generate a private key. Keep it secret.
-5. Copy the web app configuration into `.env.local` using `.env.example` as a template.
+5. The supplied public Web App configuration is included as a fallback in `lib/firebase-client.ts`; `.env.example` contains the same values if you prefer to set them explicitly in Vercel. Use the exact Firebase field names `apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId` and `measurementId` in JavaScript configuration objects.
 6. Add the service-account JSON as `FIREBASE_SERVICE_ACCOUNT_JSON`. Keep it server-only.
 7. Set `ADMIN_EMAILS` to the exact verified admin email address(es), comma-separated.
 8. **Do not replace the existing project's database rules.** The app accesses `/luxuryVip` only through the server-side Admin SDK; the browser never reads or writes VIP records directly. Keep the current rules for the other application and review them separately.
@@ -32,8 +32,9 @@ Open http://localhost:3000. Admin: http://localhost:3000/admin.
 ## 4. Vercel deployment
 1. Push this folder to a private Git repository.
 2. Import it in Vercel as a Next.js project.
-3. Add every variable from `.env.example` in Vercel → Project → Settings → Environment Variables. Do not add `FIREBASE_SERVICE_ACCOUNT_JSON` with a `NEXT_PUBLIC_` prefix.
-4. Deploy and test the public registration and admin login flows.
+3. Add `FIREBASE_SERVICE_ACCOUNT_JSON` and `ADMIN_EMAILS` in Vercel → Project → Settings → Environment Variables. The public Firebase web settings are already included as fallbacks; you may also add the matching `NEXT_PUBLIC_FIREBASE_*` variables from `.env.example`. Do not add the service account with a `NEXT_PUBLIC_` prefix.
+4. In Firebase Console → Authentication → Settings → Authorized domains, add your exact Vercel domain (for example, `your-project.vercel.app`).
+5. Redeploy after changing environment variables, then test the public registration and admin login flows.
 
 ## 5. How it works
 - Admin signs in with Firebase Email/Password.
